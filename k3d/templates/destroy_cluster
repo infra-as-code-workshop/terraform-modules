@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+k3d cluster delete ${cluster_name}
+rm ${kubeconfig_path}
