@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 function create_k3d_cluster() {
-  k3d cluster create --agents ${node_count} --kubeconfig-update-default=false --kubeconfig-switch-context=false ${cluster_name}
+  k3d cluster create --config ${config_path} ${cluster_name}
   k3d kubeconfig write ${cluster_name} --output ${kubeconfig_path}
 }
 

@@ -1,14 +1,45 @@
-resource "local_file" "create_cluster" {
+locals {
+  image                   = "rancher/k3s:v${var.kubernetes_version}-k3s1"
+  config_file             = "config.yaml"
+  registry_name           = "${var.cluster_name}.localhost"
+  registry_container_name = "k3d-${local.registry_name}"
+  registries              = var.create_docker_registry ? ["${local.registry_container_name}:${var.registry_port}"] : []
+}
+
+resource "local_file" "cluster_config" {
+  filename = "${path.root}/scripts/${local.config_file}"
+  content = yamlencode({
+    apiVersion = "k3d.io/v1alpha2"
+    kind       = "Simple"
+    name       = var.cluster_name
+    servers    = var.server_count
+    agents     = var.node_count
+    image      = local.image
+    registries = {
+      use = local.registries
+    }
+    options = {
+      kubeconfig = {
+        updateDefaultKubeconfig = false
+        switchCurrentContext    = false
+      }
+    }
+  })
+}
+
+resource "local_file" "create_cluster_script" {
   filename = "${path.root}/scripts/create_cluster"
+
   content = templatefile("${path.module}/templates/create_cluster", {
+    config_path     = local.config_file
     cluster_name    = var.cluster_name
-    node_count      = var.node_count
     kubeconfig_path = local.kubeconfig_path
   })
 }
 
-resource "local_file" "destroy_cluster" {
+resource "local_file" "destroy_cluster_script" {
   filename = "${path.root}/scripts/destroy_cluster"
+
   content = templatefile("${path.module}/templates/destroy_cluster", {
     cluster_name    = var.cluster_name
     node_count      = var.node_count
@@ -16,30 +47,59 @@ resource "local_file" "destroy_cluster" {
   })
 }
 
+resource "local_file" "destroy_registry_script" {
+  count    = var.create_docker_registry ? 1 : 0
+  filename = "${path.root}/scripts/destroy_registry"
+
+  content = templatefile("${path.module}/templates/destroy_registry", {
+    registry_name = local.registry_container_name
+  })
+}
+
 resource "local_file" "tmuxp_config" {
   filename = pathexpand("~/.tmuxp/${var.cluster_name}.yaml")
+
   content = yamlencode({
     session_name = var.cluster_name
+    panes        = []
+
     windows = [
       {
         window_name = "default"
-      }
-    ]
-    panes : []
+    }]
+
     environment = {
       KUBECONFIG = pathexpand(local.kubeconfig_path)
     }
   })
 }
 
+resource "null_resource" "k3d_registry" {
+  count = var.create_docker_registry ? 1 : 0
+  depends_on = [
+    local_file.destroy_registry_script
+  ]
+
+  provisioner "local-exec" {
+    command = "k3d registry create ${local.registry_name} --port ${var.registry_port}"
+  }
+
+  provisioner "local-exec" {
+    when        = destroy
+    working_dir = "${path.root}/scripts"
+    command     = "bash destroy_registry"
+  }
+}
+
 resource "null_resource" "k3d_cluster" {
   depends_on = [
-    local_file.create_cluster,
-    local_file.destroy_cluster
+    local_file.create_cluster_script,
+    local_file.destroy_cluster_script,
+    null_resource.k3d_registry,
   ]
 
   triggers = {
-    create_cluster_script = sha256(local_file.create_cluster.content)
+    create_cluster_script = sha256(local_file.create_cluster_script.content)
   }
 
   provisioner "local-exec" {
