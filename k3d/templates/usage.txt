@@ -1,0 +1,9 @@
+# Add following entries to your /etc/hosts
+
+127.0.0.1 ${registry_name}
+
+# Tag the images using ${registry_name}:${registry_port}, for example
+
+docker tag alpine:latest ${registry_name}:${registry_port}/alpine:latest
+
+docker push ${registry_name}:${registry_port}/alpine:latest

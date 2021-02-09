@@ -1,9 +1,9 @@
 locals {
-  image                   = "rancher/k3s:v${var.kubernetes_version}-k3s1"
-  config_file             = "config.yaml"
-  registry_name           = "${var.cluster_name}.localhost"
-  registry_container_name = "k3d-${local.registry_name}"
-  registries              = var.create_docker_registry ? ["${local.registry_container_name}:${var.registry_port}"] : []
+  image              = "rancher/k3s:v${var.kubernetes_version}-k3s1"
+  config_file        = "config.yaml"
+  registry_name      = "${var.cluster_name}.localhost"
+  registry_host_name = "k3d-${local.registry_name}"
+  registries         = var.create_docker_registry ? ["${local.registry_host_name}:${var.registry_port}"] : []
 }
 
 resource "local_file" "cluster_config" {
@@ -52,7 +52,7 @@ resource "local_file" "destroy_registry_script" {
   filename = "${path.root}/scripts/destroy_registry"
 
   content = templatefile("${path.module}/templates/destroy_registry", {
-    registry_name = local.registry_container_name
+    registry_name = local.registry_host_name
   })
 }
 
