@@ -1,5 +1,5 @@
 output "kube_config" {
-  value = local.kubeconfig_path
+  value = pathexpand(local.kubeconfig_path)
 }
 
 output "registry_usage" {
