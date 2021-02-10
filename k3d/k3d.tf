@@ -4,10 +4,11 @@ locals {
   registry_name      = "${var.cluster_name}.localhost"
   registry_host_name = "k3d-${local.registry_name}"
   registries         = var.create_docker_registry ? ["${local.registry_host_name}:${var.registry_port}"] : []
+  scripts_path       = "${path.root}/scripts/${var.cluster_name}"
 }
 
 resource "local_file" "cluster_config" {
-  filename = "${path.root}/scripts/${local.config_file}"
+  filename = "${local.scripts_path}/${local.config_file}"
   content = yamlencode({
     apiVersion = "k3d.io/v1alpha2"
     kind       = "Simple"
@@ -28,7 +29,7 @@ resource "local_file" "cluster_config" {
 }
 
 resource "local_file" "create_cluster_script" {
-  filename = "${path.root}/scripts/create_cluster"
+  filename = "${local.scripts_path}/create_cluster"
 
   content = templatefile("${path.module}/templates/create_cluster", {
     config_path     = local.config_file
@@ -38,7 +39,7 @@ resource "local_file" "create_cluster_script" {
 }
 
 resource "local_file" "destroy_cluster_script" {
-  filename = "${path.root}/scripts/destroy_cluster"
+  filename = "${local.scripts_path}/destroy_cluster"
 
   content = templatefile("${path.module}/templates/destroy_cluster", {
     cluster_name    = var.cluster_name
@@ -49,7 +50,7 @@ resource "local_file" "destroy_cluster_script" {
 
 resource "local_file" "destroy_registry_script" {
   count    = var.create_docker_registry ? 1 : 0
-  filename = "${path.root}/scripts/destroy_registry"
+  filename = "${local.scripts_path}/destroy_registry"
 
   content = templatefile("${path.module}/templates/destroy_registry", {
     registry_name = local.registry_host_name
@@ -80,14 +81,18 @@ resource "null_resource" "k3d_registry" {
     local_file.destroy_registry_script
   ]
 
+  triggers = {
+    working_dir = local.scripts_path
+  }
+
   provisioner "local-exec" {
     command = "k3d registry create ${local.registry_name} --port ${var.registry_port}"
   }
 
   provisioner "local-exec" {
     when        = destroy
-    working_dir = "${path.root}/scripts"
     command     = "bash destroy_registry"
+    working_dir = self.triggers.working_dir
   }
 }
 
@@ -100,16 +105,17 @@ resource "null_resource" "k3d_cluster" {
 
   triggers = {
     create_cluster_script = sha256(local_file.create_cluster_script.content)
+    working_dir           = local.scripts_path
   }
 
   provisioner "local-exec" {
     command     = "bash create_cluster"
-    working_dir = "${path.root}/scripts"
+    working_dir = local.scripts_path
   }
 
   provisioner "local-exec" {
     when        = destroy
     command     = "bash destroy_cluster"
-    working_dir = "${path.root}/scripts"
+    working_dir = self.triggers.working_dir
   }
 }
