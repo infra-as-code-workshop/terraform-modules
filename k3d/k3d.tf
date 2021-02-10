@@ -5,6 +5,9 @@ locals {
   registry_host_name = "k3d-${local.registry_name}"
   registries         = var.create_docker_registry ? ["${local.registry_host_name}:${var.registry_port}"] : []
   scripts_path       = "${path.root}/scripts/${var.cluster_name}"
+  tmuxp_envs = merge(var.tmuxp_environment_variables, {
+    KUBECONFIG = pathexpand(local.kubeconfig_path)
+  })
 }
 
 resource "local_file" "cluster_config" {
@@ -62,16 +65,13 @@ resource "local_file" "tmuxp_config" {
 
   content = yamlencode({
     session_name = var.cluster_name
+    environment  = local.tmuxp_envs
     panes        = []
 
     windows = [
       {
         window_name = "default"
     }]
-
-    environment = {
-      KUBECONFIG = pathexpand(local.kubeconfig_path)
-    }
   })
 }
 

@@ -23,3 +23,8 @@ variable "create_docker_registry" {
   type    = bool
   default = true
 }
+
+variable "tmuxp_environment_variables" {
+  type    = map(string)
+  default = {}
+}
