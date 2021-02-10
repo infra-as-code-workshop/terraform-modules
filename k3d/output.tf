@@ -1,3 +1,11 @@
+output "name" {
+  value = var.cluster_name
+}
+
+output "cluster_name" {
+  value = "k3d-${var.cluster_name}"
+}
+
 output "kube_config" {
   value = pathexpand(local.kubeconfig_path)
 }
