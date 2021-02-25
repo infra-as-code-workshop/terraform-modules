@@ -10,6 +10,10 @@ output "kube_config" {
   value = pathexpand(local.kubeconfig_path)
 }
 
+output "registry_name" {
+  value = local.registry_host_name
+}
+
 output "registry_usage" {
   value = templatefile("${path.module}/templates/usage.txt", {
     registry_name = local.registry_host_name
