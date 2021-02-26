@@ -84,6 +84,7 @@ resource "null_resource" "k3d_registry" {
 
   triggers = {
     working_dir = local.scripts_path
+    config_file = sha256(local_file.cluster_config.content)
   }
 
   provisioner "local-exec" {
@@ -106,6 +107,7 @@ resource "null_resource" "k3d_cluster" {
 
   triggers = {
     create_cluster_script = sha256(local_file.create_cluster_script.content)
+    config_file           = sha256(local_file.cluster_config.content)
     working_dir           = local.scripts_path
   }
 
