@@ -28,3 +28,8 @@ variable "tmuxp_environment_variables" {
   type    = map(string)
   default = {}
 }
+
+variable "network" {
+  type    = string
+  default = ""
+}

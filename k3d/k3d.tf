@@ -19,6 +19,7 @@ resource "local_file" "cluster_config" {
     servers    = var.server_count
     agents     = var.node_count
     image      = local.image
+    network    = var.network
     registries = {
       use = local.registries
     }
