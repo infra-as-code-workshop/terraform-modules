@@ -11,7 +11,7 @@ output "kube_config" {
 }
 
 output "registry_name" {
-  value = local.registry_host_name
+  value = "${local.registry_host_name}:${var.registry_port}"
 }
 
 output "registry_usage" {
